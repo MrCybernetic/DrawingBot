@@ -1,12 +1,12 @@
 PrintWriter outputCode;
 String[] inputGcode, lineFromGcode;
-PVector startVector, vector, voidVector, lastStartVector, lastMove;
-float distance=0.0, angle=0.0, maxX=0.0, maxY=0.0, minX=0.0, minY=0.0, maxXOutput=480.0, maxYOutput=280.0, scale=1.0;
+PVector startVector, vector, voidVector, lastStartVector, lastMove, pivotVector,vectortemp;
+float distance=0.0, angle=0.0,x,y,iI,jJ,alpha,radius;
 String outputName="output.txt";
-boolean firstdraw=true;
+boolean firstdraw=true,inverted=false;
 
 public void settings() {
-  size(800, 800);
+  size(1200, 1000);
 }
 
 void setup() {
@@ -20,62 +20,57 @@ void setup() {
 }
 
 void draw() {
-  float x;
-  float y;
   lastStartVector=new PVector(0, 0);
   lastMove=new PVector(0, 0);
   background(100);
-  resetMatrix();
-  //////////////Check dimension
-   for (int i = 0; i < inputGcode.length; i++) {
-    lineFromGcode = splitTokens(inputGcode[i]);
-    if (lineFromGcode.length>=3) {
-      if (lineFromGcode[0].equals("G1") || lineFromGcode[0].equals("G0")) {
-        for (int j = 0; j < lineFromGcode.length; j++) {
-          if (lineFromGcode[j].charAt(0) == 'X') {
-            x = float(splitTokens(lineFromGcode[j], "X")[0]);
-            if (x<minX) minX=x;
-            if (x>maxX) maxX=x;
-            for (int k = 0; k < lineFromGcode.length; k++) {
-              if (lineFromGcode[k].charAt(0) == 'Y') {         
-                y = float(splitTokens(lineFromGcode[k], "Y")[0]);
-                if (y<minY) minY=y;
-                if (y>maxY) maxY=y;
-              }
-            }
-          }
-        }
-      }
-    }
-   }
-   println("  *** Xmin : "+minX+"mm Xmax : "+maxX+"mm Ymin : "+minY+"mm Ymax : "+maxY+"mm ");
-   println("  *** Drawing size : "+(maxX-minX)+"mm x "+(maxY-minY)+"mm");
-   //maxXOutput=480.0, maxYOutput=280.0, scale=1.0
-   if (maxX>maxXOutput) scale=maxXOutput/maxX;
-   if (maxY>maxYOutput && scale>maxYOutput/maxY) {
-     scale=maxYOutput/maxY;
-   }
-   println("  *** After scale up/down : "+(maxX-minX)*scale+"mm x "+(maxY-minY)*scale+"mm");
-   ///////////////////////////////////////
-
+  translate(670,0);
+  //rotate(PI);
   for (int i = 0; i < inputGcode.length; i++) {
     lineFromGcode = splitTokens(inputGcode[i]);
     if (lineFromGcode.length>0) {
       if (lineFromGcode[0].equals("G10")) outputCode.println("penup();");
       if (lineFromGcode[0].equals("G11")) outputCode.println("pendown();");
+      /*
+      Add Z management too
+      */
     }
     if (lineFromGcode.length>=3) {
-      if (lineFromGcode[0].equals("G1") || lineFromGcode[0].equals("G0")) {
+      if (lineFromGcode[0].equals("G02") || lineFromGcode[0].equals("G03") || lineFromGcode[0].equals("G2") ||lineFromGcode[0].equals("G3")) {
         for (int j = 0; j < lineFromGcode.length; j++) {
           if (lineFromGcode[j].charAt(0) == 'X') {
             x = float(splitTokens(lineFromGcode[j], "X")[0]);
-            if (x<minX) minX=x;
-            if (x>maxX) maxX=x;
+            for (int k = 0; k < lineFromGcode.length; k++) {
+              if (lineFromGcode[k].charAt(0) == 'Y') { 
+                y = float(splitTokens(lineFromGcode[k], "Y")[0]);
+                for (int l = 0; l < lineFromGcode.length; l++) {
+                  if (lineFromGcode[l].charAt(0) == 'I') { 
+                    iI = float(splitTokens(lineFromGcode[l], "I")[0]);
+                    for (int m = 0; m < lineFromGcode.length; m++) {
+                      if (lineFromGcode[m].charAt(0) == 'J') { 
+                        jJ = float(splitTokens(lineFromGcode[m], "J")[0]);
+                        pivotVector = new PVector(iI,jJ);
+                        startVector = new PVector(x,y);
+                        if (lineFromGcode[0].equals("G03") || lineFromGcode[0].equals("G3")) {
+                          inverted=true;
+                        } else {
+                          inverted=false;
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+      if (lineFromGcode[0].equals("G01") || lineFromGcode[0].equals("G00") || lineFromGcode[0].equals("G1") || lineFromGcode[0].equals("G0")) {
+        for (int j = 0; j < lineFromGcode.length; j++) {
+          if (lineFromGcode[j].charAt(0) == 'X') {
+            x = float(splitTokens(lineFromGcode[j], "X")[0]);
             for (int k = 0; k < lineFromGcode.length; k++) {
               if (lineFromGcode[k].charAt(0) == 'Y') {         
                 y = float(splitTokens(lineFromGcode[k], "Y")[0]);
-                if (y<minY) minX=y;
-                if (y>maxY) maxX=y;
                 startVector = new PVector (x, y);
               }
             }
@@ -83,8 +78,70 @@ void draw() {
         }
       }
     }
+    if ((pivotVector!=voidVector) && (startVector!=voidVector)) {    
+      vector=new PVector(startVector.x-lastStartVector.x, startVector.y-lastStartVector.y);
+      angle=(vector.heading()-lastMove.heading());
+      /*if (angle>=PI) {
+        outputCode.println("left("+degrees(2*PI-angle)+");");
+      } else if (angle>=0 && angle< PI) {
+        outputCode.println("right("+degrees(angle)+");");
+      } else if (angle<0 && angle> -PI) {
+        outputCode.println("left("+degrees(-angle)+");");
+      } else if (angle<=-PI) {
+        outputCode.println("right("+degrees(2*PI+angle)+");");
+      }*/
+
+      if (angle>=PI) {
+        rotate(-(PI-(angle-PI)));
+      } else if (angle>=0 && angle< PI) {
+        rotate(angle);
+      } else if (angle<0 && angle> -PI) {
+        rotate(angle);
+      } else if (angle<=-PI) {
+        rotate((PI+(angle+PI)));
+      }
+      translate(vector.mag(),0);
+      vectortemp= new PVector(pivotVector.x+startVector.x-lastStartVector.x,pivotVector.y+startVector.y-lastStartVector.y);
+      alpha=(vectortemp.heading()-pivotVector.heading());
+      noFill();
+      stroke(cos(i/((float)inputGcode.length)*2*PI)*255, cos(i/((float)inputGcode.length)*2*PI+2*PI/3)*255, cos(i/((float)inputGcode.length)*2*PI+4*PI/3)*255);
+      strokeWeight(2);
+      if (!inverted) {
+        if (((PI/2.0)-(PI/2.0+alpha))<=0) {
+          arc(0, -pivotVector.mag(), pivotVector.mag()*2.0, pivotVector.mag()*2.0,PI/2.0,PI/2.0+alpha);
+          outputCode.println("moveWheelsRL("+alpha+"*("+pivotVector.mag()+"-wheel_base/2.0),"+alpha+"*("+pivotVector.mag()+"+wheel_base/2.0));");
+        } else {
+          arc(0, -pivotVector.mag(), pivotVector.mag()*2.0, pivotVector.mag()*2.0,PI/2.0,PI/2.0+alpha+2*PI);
+          float angletemp = alpha+2*PI;
+          outputCode.println("moveWheelsRL("+angletemp+"*("+pivotVector.mag()+"-wheel_base/2.0),"+angletemp+"*("+pivotVector.mag()+"+wheel_base/2.0));");
+        }
+      } else {
+        if (PI+PI/2.0+alpha-(PI+PI/2.0)<=0) {
+          arc(0, pivotVector.mag(), pivotVector.mag()*2.0, pivotVector.mag()*2.0,3*PI/2.0+alpha,3*PI/2.0);
+          float angletemp = abs(alpha);
+          outputCode.println("moveWheelsRL("+angletemp+"*("+pivotVector.mag()+"+wheel_base/2.0),"+angletemp+"*("+pivotVector.mag()+"-wheel_base/2.0));");
+        } else {
+          arc(0, pivotVector.mag(), pivotVector.mag()*2.0, pivotVector.mag()*2.0,3*PI/2.0+alpha-2*PI,3*PI/2.0);
+          float angletemp = abs(alpha-2*PI);
+          outputCode.println("moveWheelsRL("+angletemp+"*("+pivotVector.mag()+"+wheel_base/2.0),"+angletemp+"*("+pivotVector.mag()+"-wheel_base/2.0));");
+        }
+      }
+      noStroke();
+      fill(cos(i/((float)inputGcode.length)*2*PI)*255, cos(i/((float)inputGcode.length)*2*PI+2*PI/3)*255, cos(i/((float)inputGcode.length)*2*PI+4*PI/3)*255);
+      circle(0, 0, cos(i/((float)inputGcode.length)*2*PI)*5+10);
+      if (i==1) {
+        fill(0, 0, 0);
+        textSize(300);
+        text("Origin", 30, 30);
+      }
+      lastStartVector=startVector;
+      startVector=voidVector;
+      lastMove=vector;
+      pivotVector=voidVector;
+    }
+    
     if (startVector!=voidVector) {
-      vector=PVector.sub(startVector, lastStartVector);
+      vector=new PVector(startVector.x-lastStartVector.x, startVector.y-lastStartVector.y);
       angle=(vector.heading()-lastMove.heading());
       distance=vector.mag();
 
@@ -97,18 +154,18 @@ void draw() {
       } else if (angle<=-PI) {
         outputCode.println("right("+degrees(2*PI+angle)+");");
       }
-      outputCode.println("forward("+scale*distance+");");
+      outputCode.println("forward("+distance+");");
 
       if (angle>=PI) {
         rotate(-(PI-(angle-PI)));
       } else if (angle>=0 && angle< PI) {
-        rotate((angle));
+        rotate(angle);
       } else if (angle<0 && angle> -PI) {
         rotate(angle);
       } else if (angle<=-PI) {
         rotate((PI+(angle+PI)));
       }
-      translate(distance, 0);
+      translate(distance*3, 0);
       fill(cos(i/((float)inputGcode.length)*2*PI)*255, cos(i/((float)inputGcode.length)*2*PI+2*PI/3)*255, cos(i/((float)inputGcode.length)*2*PI+4*PI/3)*255);
       circle(0, 0, cos(i/((float)inputGcode.length)*2*PI)*5+10);
       if (i==1) {
@@ -119,6 +176,7 @@ void draw() {
       lastStartVector=startVector;
       lastMove=vector;
       startVector=voidVector;
+      pivotVector=voidVector;
     }
   }
   outputCode.flush(); // Writes the remaining data to the file
