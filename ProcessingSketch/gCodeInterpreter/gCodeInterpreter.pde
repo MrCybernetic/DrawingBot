@@ -1,7 +1,7 @@
 PrintWriter outputCode;
 String[] inputGcode, lineFromGcode;
 PVector startVector, vector, voidVector, lastStartVector, lastMove, pivotVector,vectortemp;
-float distance=0.0, angle=0.0,x,y,iI,jJ,alpha,radius;
+float distance=0.0, angle=0.0,x,y,iI,jJ,alpha,radius, distL, distR, wheel_base=116.0;
 String outputName="output.txt";
 boolean firstdraw=true,inverted=false;
 
@@ -23,7 +23,7 @@ void draw() {
   lastStartVector=new PVector(0, 0);
   lastMove=new PVector(0, 0);
   background(100);
-  translate(670,0);
+  translate(670,500);
   //rotate(PI);
   for (int i = 0; i < inputGcode.length; i++) {
     lineFromGcode = splitTokens(inputGcode[i]);
@@ -100,7 +100,7 @@ void draw() {
       } else if (angle<=-PI) {
         rotate((PI+(angle+PI)));
       }
-      translate(vector.mag(),0);
+      translate(3*vector.mag(),0);
       vectortemp= new PVector(pivotVector.x+startVector.x-lastStartVector.x,pivotVector.y+startVector.y-lastStartVector.y);
       alpha=(vectortemp.heading()-pivotVector.heading());
       noFill();
@@ -109,23 +109,28 @@ void draw() {
       if (!inverted) {
         if (((PI/2.0)-(PI/2.0+alpha))<=0) {
           arc(0, -pivotVector.mag(), pivotVector.mag()*2.0, pivotVector.mag()*2.0,PI/2.0,PI/2.0+alpha);
-          outputCode.println("moveWheelsRL("+alpha+"*("+pivotVector.mag()+"-wheel_base/2.0),"+alpha+"*("+pivotVector.mag()+"+wheel_base/2.0));");
+          distL=alpha*(pivotVector.mag()+wheel_base/2.0);
+          distR=alpha*(pivotVector.mag()-wheel_base/2.0);
         } else {
           arc(0, -pivotVector.mag(), pivotVector.mag()*2.0, pivotVector.mag()*2.0,PI/2.0,PI/2.0+alpha+2*PI);
           float angletemp = alpha+2*PI;
-          outputCode.println("moveWheelsRL("+angletemp+"*("+pivotVector.mag()+"-wheel_base/2.0),"+angletemp+"*("+pivotVector.mag()+"+wheel_base/2.0));");
+          distL=angletemp*(pivotVector.mag()+wheel_base/2.0);
+          distR=angletemp*(pivotVector.mag()-wheel_base/2.0);
         }
       } else {
         if (PI+PI/2.0+alpha-(PI+PI/2.0)<=0) {
           arc(0, pivotVector.mag(), pivotVector.mag()*2.0, pivotVector.mag()*2.0,3*PI/2.0+alpha,3*PI/2.0);
           float angletemp = abs(alpha);
-          outputCode.println("moveWheelsRL("+angletemp+"*("+pivotVector.mag()+"+wheel_base/2.0),"+angletemp+"*("+pivotVector.mag()+"-wheel_base/2.0));");
+          distL=angletemp*(pivotVector.mag()+wheel_base/2.0);
+          distR=angletemp*(pivotVector.mag()-wheel_base/2.0);
         } else {
           arc(0, pivotVector.mag(), pivotVector.mag()*2.0, pivotVector.mag()*2.0,3*PI/2.0+alpha-2*PI,3*PI/2.0);
           float angletemp = abs(alpha-2*PI);
-          outputCode.println("moveWheelsRL("+angletemp+"*("+pivotVector.mag()+"+wheel_base/2.0),"+angletemp+"*("+pivotVector.mag()+"-wheel_base/2.0));");
+          distL=angletemp*(pivotVector.mag()+wheel_base/2.0);
+          distR=angletemp*(pivotVector.mag()-wheel_base/2.0);
         }
       }
+      outputCode.println("moveWheelsRL("+distR+","+distL+");");
       noStroke();
       fill(cos(i/((float)inputGcode.length)*2*PI)*255, cos(i/((float)inputGcode.length)*2*PI+2*PI/3)*255, cos(i/((float)inputGcode.length)*2*PI+4*PI/3)*255);
       circle(0, 0, cos(i/((float)inputGcode.length)*2*PI)*5+10);
@@ -165,7 +170,7 @@ void draw() {
       } else if (angle<=-PI) {
         rotate((PI+(angle+PI)));
       }
-      translate(distance*3, 0);
+      translate(distance, 0);
       fill(cos(i/((float)inputGcode.length)*2*PI)*255, cos(i/((float)inputGcode.length)*2*PI+2*PI/3)*255, cos(i/((float)inputGcode.length)*2*PI+4*PI/3)*255);
       circle(0, 0, cos(i/((float)inputGcode.length)*2*PI)*5+10);
       if (i==1) {
