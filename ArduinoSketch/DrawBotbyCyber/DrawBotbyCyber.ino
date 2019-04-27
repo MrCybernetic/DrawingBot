@@ -6,8 +6,8 @@ int PEN_DOWN = 0; // angle of servo when pen is down
 int PEN_UP = 80;   // angle of servo when pen is up
 Servo penServo;
 
-float wheel_dia=55.19;//59.45
-float wheel_base=107.89; //      distance between the 2 wheels//103
+float wheel_dia=55.48;//59.45
+float wheel_base=110.095; //      distance between the 2 wheels//103
 int steps_rev=128; //           number of steps per revolution (16x gearbox)
 int delay_time=5; //           time between steps in ms//5//8
 
@@ -52,7 +52,13 @@ void setup() {
 
 void loop(){ 
 
-left(90.98675);
+    for(int i=0; i<16; i++){
+    right(90);
+    
+  }
+
+
+/*left(90.98675);
 forward(58.648697);
 pendown();
 left(133.36694);
@@ -1286,7 +1292,7 @@ left(168.35373);
 forward(16.58947);
 right(160.41818);
 forward(0.0);
-
+*/
 
 penup();
   done();      // releases stepper motor
